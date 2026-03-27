@@ -4,119 +4,131 @@ description: Frontend directory structure and file organization patterns. Apply 
 type: pattern
 ---
 
-# Frontend Architecture Patterns
+# Frontend Component Organization
 
 **This is a reference pattern.** Learn from the approach, adapt to your context — don't copy verbatim.
 
-Patterns for organizing frontend applications in serverless architectures.
+**Problem**: Frontend projects grow into flat directories with hundreds of files, making it hard to find related code or understand feature boundaries.
 
-## Technology Stack Considerations
+**Solution**: Organize by feature/domain, colocate related files, and separate shared utilities from feature-specific code.
 
-Common choices for serverless frontends:
+---
 
-- **Framework**: Next.js, Nuxt, SvelteKit, or static site generators
-- **Language**: TypeScript for type safety
-- **Styling**: Tailwind CSS, CSS Modules, or styled-components
-- **Data Fetching**: GraphQL clients (Apollo, urql), REST clients (fetch, axios)
-- **Authentication**: Auth context with identity provider integration
+## Pattern
 
-## Directory Structure Pattern
-
-**Principle**: Organize by feature or domain, not by file type
+**Principle**: Organize by feature or domain, not by file type.
 
 ```
 frontend/
-├── app/                 # Next.js app directory
-│   ├── globals.css      # Global styles
-│   ├── layout.tsx       # Root layout
-│   └── page.tsx         # Home page
+├── app/                 # Framework routing (Next.js app dir, Nuxt pages, etc.)
+│   ├── layout.tsx
+│   └── page.tsx
 ├── components/          # Reusable UI components
-│   ├── ui/              # Base UI components
-│   ├── advocate-greeting-modal.tsx
-│   ├── ai-question.tsx
-│   ├── footer.tsx
+│   ├── ui/              # Base primitives (Button, Input, Modal, etc.)
 │   ├── header.tsx
-│   ├── hero-section.tsx
+│   ├── footer.tsx
 │   └── ...
-├── lib/                 # Utility functions and hooks
-│   ├── advocate-greeting/
-│   ├── ai-advocate/
-│   ├── apollo/
-│   ├── auth/
-│   └── local/
-├── public/              # Static assets
-├── queries/             # GraphQL queries
-│   ├── advocate-greeting.ts
-│   └── developers.ts
-└── shared/              # Shared types and constants
-    ├── constants.ts
-    └── types.ts
+├── lib/                 # Feature modules and hooks
+│   ├── auth/            # Authentication context, hooks, utilities
+│   ├── notifications/   # Notification service, hooks
+│   └── dashboard/       # Dashboard-specific logic
+├── queries/             # Data fetching (GraphQL queries, API calls)
+├── shared/              # Cross-cutting types, constants, helpers
+│   ├── types.ts
+│   └── constants.ts
+└── public/              # Static assets
 ```
 
-## Key Components
+**Key Rules**:
+- **Feature directories** in `lib/` contain hooks, services, and utilities for one domain
+- **Components** that belong to a single feature live in that feature's `lib/` directory
+- **Shared components** used across features live in `components/`
+- **Base UI primitives** (buttons, inputs, modals) live in `components/ui/`
 
-### Authentication
+---
 
-The authentication system is implemented in the `lib/auth` directory:
+## Why This Pattern?
 
-- **auth-context.tsx**: Provides authentication context to the application
-- **cookie-auth.ts**: Handles cookie-based authentication
-- **auth-utils.ts**: Utility functions for authentication
+**Benefits**:
+- **Discoverability**: Related code lives together — find a feature's hook, service, and types in one directory
+- **Encapsulation**: Feature boundaries are visible in the file tree
+- **Scalability**: Adding a feature means adding a directory, not scattering files across the tree
+- **Deletability**: Removing a feature is removing a directory
 
-### AI Advocate
+**Anti-pattern — organizing by file type**:
+```
+# ❌ Hard to find related code
+components/
+  DashboardChart.tsx
+  NotificationBell.tsx
+  UserProfile.tsx
+hooks/
+  useDashboard.ts
+  useNotifications.ts
+  useProfile.ts
+services/
+  dashboardService.ts
+  notificationService.ts
+  profileService.ts
+```
 
-The AI advocate functionality is implemented in the `lib/ai-advocate` directory:
+---
 
-- **use-ai-advocate.ts**: Hook for interacting with the AI advocate
-- **use-ai-advocate-dev.ts**: Development version of the hook
+## Feature Module Structure
 
-### Advocate Greeting
+Each feature directory in `lib/` follows a consistent internal structure:
 
-The advocate greeting functionality is implemented in the `lib/advocate-greeting` directory:
+```
+lib/auth/
+├── auth-context.tsx      # React context provider
+├── use-auth.ts           # Primary hook for consumers
+├── auth-utils.ts         # Pure helper functions
+└── types.ts              # Feature-specific types (optional)
+```
 
-- **advocate-greeting-service.ts**: Service for fetching advocate greetings
-- **use-advocate-greeting.ts**: Hook for using advocate greetings
-- **use-advocate-greeting-dev.ts**: Development version of the hook
+**Conventions**:
+- One primary hook per feature (`use-{feature}.ts`) — this is the public API
+- Context providers live alongside their hooks
+- Utility functions are pure and testable
+- Feature-specific types stay in the feature directory; shared types go to `shared/types.ts`
 
-### Local Development
+---
 
-The local development functionality is implemented in the `lib/local` directory:
+## Data Fetching Layer
 
-- **use-local-request-interceptor.ts**: Hook for intercepting requests in local development
+Separate data fetching definitions from feature logic:
 
-## Data Flow
+```
+queries/
+├── users.ts              # User-related queries/mutations
+└── dashboard.ts          # Dashboard data queries
+```
 
-1. **Authentication**: The auth context provides authentication state to the application
-2. **Data Fetching**: Components use hooks to fetch data from the GraphQL API
-3. **Rendering**: Components render based on the fetched data
-4. **User Interaction**: User interactions trigger data fetching and state updates
+Features consume these through hooks:
 
-## Authentication Flow
+```typescript
+// lib/dashboard/use-dashboard.ts
+import { getDashboardData } from '@/queries/dashboard';
 
-The frontend authentication flow is implemented as follows:
+export function useDashboard() {
+  const { data, loading, error } = useQuery(getDashboardData);
+  return { metrics: data?.metrics, isLoading: loading };
+}
+```
 
-1. **Token Extraction**: The auth context extracts tokens from cookies
-2. **Authentication State**: The auth context provides authentication state to components
-3. **Request Headers**: The auth context provides headers for authenticated requests
-4. **Local Development**: In local development, the auth context uses a visitor parameter
+This keeps data fetching definitions reusable across features while keeping consumption logic colocated with the feature.
 
-For more details on the authentication flow, see the [Authentication Flow](../auth-flow.md) document.
+---
 
-## Local Development
+## When to Split
 
-The frontend supports local development with mock data:
+- **New directory in `lib/`**: When a feature has 2+ files (hook + service, or hook + context)
+- **New file in `components/`**: When a component is used by 2+ features
+- **Move to `components/ui/`**: When a component is purely presentational with no business logic
 
-1. **Environment Detection**: The auth context detects the local environment
-2. **Request Interception**: The local request interceptor intercepts requests
-3. **Mock Data**: The interceptor provides mock data for advocate greetings and AI advocate
+---
 
-## Deployment
+## Related Patterns
 
-The frontend is built as a static site and deployed to S3 with CloudFront:
-
-1. **Build**: The Next.js application is built with `next build`
-2. **Export**: The built application is exported as static files
-3. **Deployment**: The static files are uploaded to S3
-4. **Distribution**: CloudFront distributes the static files
-
-For more details on the deployment process, see the [Deployment Guide](../deployment.md) document.
+- Core Principles — Separation of concerns, pure functions
+- Frontend Code Quality — Code style within components

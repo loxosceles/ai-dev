@@ -206,135 +206,140 @@ export async function getParameter(name: string): Promise<string> {
 
 ## 3-Tier Architecture (For Complex Projects)
 
+Uses composition instead of inheritance — small focused modules that commands wire together.
+
 **Structure**:
 ```
 cli/
   bin/           # Tier 1: Argument parsing + error handling ONLY
-  commands/      # Tier 2: Business logic + manager instantiation
+  commands/      # Tier 2: Business logic, composes core modules
 core/
-  base-manager.ts    # Tier 3: Shared abstractions
-  aws-manager.ts
-  env-manager.ts
+  logger.ts          # Tier 3: Standalone utilities
+  env.ts
+  aws/
+    ssm.ts
+    s3.ts
 ```
 
-**Tier 1: CLI Binaries** - Entry points only (NO business logic)
+**Tier 1: CLI Binaries** — Entry points only (NO business logic)
 ```typescript
 // bin/ssm-params.ts
 import { Command } from 'commander';
-import { SSMParamsCommand } from '../commands/ssm-params';
+import { getParameter, exportParams } from '../commands/ssm-params';
 
 const program = new Command();
 
 program
   .command('get <name>')
-  .action(async (name: string) => {
-    // ONLY: Parse arguments, instantiate command, call method
-    const cmd = new SSMParamsCommand();
-    const value = await cmd.getParameter(name);
+  .option('-v, --verbose', 'verbose output')
+  .action(async (name, opts) => {
+    const value = await getParameter(name, { verbose: opts.verbose });
     console.log(value);
+  });
+
+program
+  .command('export <stage> <service>')
+  .action(async (stage, service) => {
+    await exportParams(stage, service);
   });
 
 program.parse();
 ```
 
-**Tier 2: Commands** - ALL business logic (orchestration, config, managers)
+**Tier 3: Core Modules** — Small, focused, no inheritance
+
+Each module does one thing and exports plain functions or simple factory functions:
+
+```typescript
+// core/logger.ts
+export function createLogger(verbose: boolean) {
+  return {
+    log: (msg: string) => { if (verbose) console.log(msg); },
+    error: (msg: string) => console.error(msg),
+  };
+}
+```
+
+```typescript
+// core/env.ts
+export function loadEnv(stage: string): Record<string, string> {
+  const envPath = `.env.${stage}`;
+  // Load from file, fall back to process.env
+  return { ...parseEnvFile(envPath), ...process.env };
+}
+
+export function requireEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) throw new Error(`${key} is required`);
+  return value;
+}
+```
+
+```typescript
+// core/aws/ssm.ts
+import { SSMClient, GetParameterCommand, GetParametersByPathCommand } from '@aws-sdk/client-ssm';
+
+export function createSSMClient(region: string) {
+  const client = new SSMClient({ region });
+
+  return {
+    async getParameter(name: string): Promise<string> {
+      const res = await client.send(new GetParameterCommand({ Name: name }));
+      return res.Parameter?.Value ?? '';
+    },
+
+    async getParametersByPath(path: string): Promise<Record<string, string>> {
+      const res = await client.send(new GetParametersByPathCommand({ Path: path }));
+      const params: Record<string, string> = {};
+      for (const p of res.Parameters ?? []) {
+        if (p.Name && p.Value) params[p.Name] = p.Value;
+      }
+      return params;
+    },
+  };
+}
+```
+
+**Tier 2: Commands** — Compose core modules, contain all business logic
+
 ```typescript
 // commands/ssm-params.ts
-import { AWSManager } from '../core/aws-manager';
-import { EnvironmentManager } from '../core/env-manager';
+import { createLogger } from '../core/logger';
+import { requireEnv } from '../core/env';
+import { createSSMClient } from '../core/aws/ssm';
 
-export class SSMParamsCommand {
-  private awsManager: AWSManager;
-  private envManager: EnvironmentManager;
+export async function getParameter(name: string, opts: { verbose?: boolean } = {}) {
+  const log = createLogger(opts.verbose ?? false);
+  const region = requireEnv('AWS_REGION');
+  const ssm = createSSMClient(region);
 
-  constructor() {
-    // Command instantiates and configures managers
-    this.envManager = new EnvironmentManager();
-    this.awsManager = new AWSManager(this.envManager);
-  }
+  log.log(`Fetching parameter: ${name}`);
+  return ssm.getParameter(name);
+}
 
-  async getParameter(name: string): Promise<string> {
-    // Business logic: retrieve config, call managers
-    const region = this.envManager.getRegion();
-    return await this.awsManager.getSSMParameter(name, region);
+export async function exportParams(stage: string, service: string) {
+  const region = requireEnv('AWS_REGION');
+  const projectId = requireEnv('PROJECT_ID');
+  const ssm = createSSMClient(region);
+
+  const params = await ssm.getParametersByPath(`/${projectId}/${stage}/${service}/`);
+  for (const [key, value] of Object.entries(params)) {
+    const envKey = key.split('/').pop();
+    console.log(`${envKey}=${value}`);
   }
 }
 ```
 
-**Tier 3: Core Managers** - Reusable abstractions
-
-**BaseManager** - Common functionality:
-```typescript
-// core/base-manager.ts
-export class BaseManager {
-  protected verbose: boolean;
-
-  constructor(config: { verbose?: boolean } = {}) {
-    this.verbose = config.verbose ?? false;
-  }
-
-  protected log(message: string): void {
-    if (this.verbose) console.log(message);
-  }
-
-  protected validateRequired(value: any, name: string): void {
-    if (!value) {
-      throw new Error(`${name} is required`);
-    }
-  }
-}
-```
-
-**Specific Managers** - Inherit from BaseManager:
-```typescript
-// core/env-manager.ts
-import { BaseManager } from './base-manager';
-
-export class EnvironmentManager extends BaseManager {
-  loadEnv(stage: string): Record<string, string> {
-    this.log(`Loading environment for ${stage}`);
-    return process.env;
-  }
-
-  getRegion(): string {
-    this.validateRequired(process.env.AWS_REGION, 'AWS_REGION');
-    return process.env.AWS_REGION!;
-  }
-}
-```
-
-```typescript
-// core/aws-manager.ts
-import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
-import { BaseManager } from './base-manager';
-import { EnvironmentManager } from './env-manager';
-
-export class AWSManager extends BaseManager {
-  private envManager: EnvironmentManager;
-  private ssmClient: SSMClient;
-
-  constructor(envManager: EnvironmentManager) {
-    super();
-    this.envManager = envManager;
-    this.ssmClient = new SSMClient({ 
-      region: envManager.getRegion() 
-    });
-  }
-
-  async getSSMParameter(name: string, region: string): Promise<string> {
-    this.log(`Fetching parameter: ${name}`);
-    const command = new GetParameterCommand({ Name: name });
-    const response = await this.ssmClient.send(command);
-    return response.Parameter?.Value ?? '';
-  }
-}
-```
+**Why composition over inheritance**:
+- Each module is independently testable — no base class to mock
+- No hidden behavior from parent classes
+- Easy to swap implementations (e.g., different cloud providers)
+- Commands explicitly declare what they need — no implicit `this.log()` from a base class
 
 **When to Use**:
 - Large projects with 5+ CLI tools
-- Complex operations across multiple services
-- Team environments needing consistency
-- Reusable abstractions provide clear value
+- Multiple commands sharing core modules (SSM, S3, logging)
+- Team environments needing consistent patterns
 
 ---
 

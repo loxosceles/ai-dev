@@ -4,231 +4,202 @@ description: Personalized links without explicit login for authentication. Apply
 type: pattern
 ---
 
-# Authentication Patterns
+# Link-Based Authentication
 
 **This is a reference pattern.** Learn from the approach, adapt to your context — don't copy verbatim.
 
-## Link-Based Authentication
+**Problem**: Some applications need personalized experiences without the friction of login screens — portfolio sites, demo apps, invite-only access.
 
-**Pattern**: Provide personalized experiences without requiring explicit login
+**Solution**: Embed authentication tokens in personalized URLs. An edge function validates the token and sets a session cookie, giving the visitor a seamless authenticated experience.
 
-**Use Case**: Portfolio sites, demo applications, or any scenario where you want to provide personalized content without friction of traditional authentication.
+---
 
-### Core Concept
+## Pattern
 
-Use personalized links containing tokens that authenticate visitors automatically. Each link is associated with a virtual user identity, allowing for secure, personalized content delivery without login screens.
+**Flow**:
+```
+1. Admin generates personalized link with embedded token
+2. Visitor clicks link
+3. CDN edge function intercepts request
+4. Edge function validates token, sets auth cookie
+5. Frontend loads with authentication already established
+6. API requests use cookie/token for authorization
+```
 
-### Components
+**Architecture**:
+```
+Personalized Link (contains token)
+    ↓
+CDN Edge Function
+    ├── Valid token → Set cookie, redirect to app
+    └── No/invalid token → Serve public view
+    ↓
+Static Frontend (reads cookie for auth state)
+    ↓
+API (validates token from Authorization header)
+```
 
-1. **Link Generator**
-   - Creates personalized URLs for specific visitors
-   - Associates each link with visitor metadata (company, role, etc.)
-   - Stores link-visitor associations in database
+**Key Components**:
+- **Link Generator** — Creates URLs with embedded tokens, associates each with visitor metadata
+- **Identity Backend** — Maps tokens to virtual user identities (e.g., Cognito users created without passwords)
+- **Edge Auth Function** — Validates tokens at CDN edge, sets session cookies
+- **Auth Context** — Frontend context that extracts tokens from cookies and provides auth state to components
 
-2. **Virtual User Identities**
-   - Each personalized link corresponds to a virtual user in identity provider (e.g., AWS Cognito)
-   - These users exist solely to provide authentication context
-   - No password or explicit login required
+---
 
-3. **Edge Authentication Function**
-   - Intercepts requests at CDN edge (e.g., Lambda@Edge, CloudFront Functions)
-   - Validates tokens from URL parameters
-   - Sets authentication cookies for browser session
+## Why This Pattern?
 
-4. **API Client**
-   - Uses centralized auth context for all API requests
-   - Provides personalized data based on visitor's identity
-   - Environment-aware authentication (API key vs tokens)
+**Benefits**:
+- **Zero friction**: No login screen, no password, no signup
+- **Personalized**: Each link maps to a specific visitor identity
+- **Secure**: Tokens are validated server-side, cookies are HttpOnly/Secure
+- **Tamper-proof**: URL manipulation is ineffective — auth is tied to backend identities
 
-## Authentication Flow
+**Use Cases**:
+- Portfolio sites with recruiter-specific views
+- Demo applications with invite-only access
+- Marketing sites with gated personalized content
+- Documentation with customer-specific sections
 
-1. **Link Creation**
-   - Admin creates a personalized link for a visitor
-   - System creates a virtual user identity and generates access tokens
-   - Link with embedded token is shared with visitor
+---
 
-2. **Visitor Access**
-   - Visitor clicks the personalized link
-   - CDN receives request with token parameter
-   - Edge function validates token and sets authentication cookies
+## Implementation
 
-3. **Frontend Authentication**
-   - Frontend loads with authentication cookies already set
-   - API client extracts tokens from cookies
-   - API requests include token in Authorization header
+### Edge Authentication
 
-4. **API Authorization**
-   - AppSync API validates the token against Cognito
-   - Resolvers use the visitor's identity to return personalized content
-   - Access control ensures visitors only see content intended for them
+```javascript
+// Edge function (Lambda@Edge, CloudFlare Worker, etc.)
+export async function handler(event) {
+  const request = event.Records[0].cf.request;
+  const params = new URLSearchParams(request.querystring);
+  const token = params.get('token');
+
+  if (token) {
+    const isValid = await validateToken(token);
+    if (isValid) {
+      return {
+        status: '302',
+        headers: {
+          'location': [{ value: '/' }],
+          'set-cookie': [{ value: `auth=${token}; Secure; HttpOnly; SameSite=Strict` }],
+        },
+      };
+    }
+  }
+
+  // Check existing session cookie
+  const cookies = request.headers.cookie?.[0]?.value || '';
+  if (cookies.includes('auth=')) {
+    return request; // Authenticated, proceed
+  }
+
+  return request; // Unauthenticated, serve public view
+}
+```
+
+### Frontend Auth Context
+
+```typescript
+// lib/auth/auth-context.tsx
+export function useAuth() {
+  const tokens = extractTokensFromCookies();
+  const environment = detectEnvironment();
+
+  const getAuthHeaders = (routeType: 'public' | 'protected') => {
+    if (environment === 'local') {
+      return { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY };
+    }
+    if (routeType === 'public') {
+      return { 'x-api-key': process.env.NEXT_PUBLIC_API_KEY };
+    }
+    if (tokens.accessToken) {
+      return { Authorization: `Bearer ${tokens.accessToken}` };
+    }
+    return {};
+  };
+
+  return {
+    isAuthenticated: !!tokens.accessToken,
+    environment,
+    getAuthHeaders,
+  };
+}
+```
+
+### Hook-Based Data Fetching
+
+```typescript
+// lib/profile/use-profile.ts
+export function useProfile() {
+  const { isAuthenticated, getAuthHeaders } = useAuth();
+
+  const { data, loading } = useQuery(GET_PROFILE, {
+    skip: !isAuthenticated,
+    context: { headers: getAuthHeaders('protected') },
+  });
+
+  return { profile: data?.profile, isLoading: loading };
+}
+```
+
+---
 
 ## Security Considerations
 
-- **Tokenized Links**: Each URL contains a secure token tied to a specific virtual Cognito user
-- **Content Isolation**: Visitors can only access personalized content intended for them
-- **Tamper-Proof Design**: URL manipulation is ineffective as authentication is tied to backend Cognito identities
-- **Cookie Security**: Authentication cookies use SameSite=Strict to prevent CSRF attacks
-- **Content Security Policy**: Headers mitigate XSS risks
-- **Short Token Expiration**: Tokens have limited validity periods
-- **Client-Side Authentication**: Tokens are processed in the browser for static site compatibility
-- **Security Scope**: Designed for tamper-proofing personalized content, not for highly sensitive data
+- **Cookie flags**: `Secure`, `HttpOnly`, `SameSite=Strict` — prevents XSS and CSRF
+- **Token expiration**: Short-lived tokens limit exposure window
+- **Content isolation**: Each token maps to a specific identity — visitors only see their content
+- **No client-side secrets**: Tokens are validated server-side; frontend only reads the result
+- **Direct URL access**: Without a valid token/cookie, only public content is visible (by design)
 
-## Direct URL Access
+---
 
-When a visitor accesses the base URL without a personalized link:
+## Local Development
 
-- No authentication tokens are available
-- The Apollo client cannot make authenticated requests
-- Only public content is visible
-- Personalized features are not accessible
-
-This is by design - the system expects visitors to use personalized links for the full experience.
-
-## Technical Implementation
-
-The authentication flow is implemented across several components. The system is designed to work in both deployed environments (with real authentication) and local development (with mock data):
-
-### Architecture Overview
-
-```
-┌─────────────────────────────────────┐
-│           Auth Context              │
-│  - Centralized token management     │
-│  - Environment detection            │
-│  - Auth header generation           │
-└─────────────────┬───────────────────┘
-                  │
-    ┌─────────────┼─────────────┐
-    │             │             │
-┌───▼───┐    ┌───▼───┐    ┌───▼───┐
-│Local  │    │Advocate│    │AI     │
-│Inter- │    │Greeting│    │Advo-  │
-│ceptor │    │Hooks   │    │cate   │
-│(Mock) │    │        │    │Hooks  │
-└───────┘    └───────┘    └───────┘
-```
-
-### 1. **Centralized Auth Context**:
+For local development without real tokens, use an environment-aware interceptor:
 
 ```typescript
-// Single source of truth for authentication state
-export function useAuth() {
-  return {
-    isAuthenticated,
-    environment,
-    tokens,
-    visitorParam,
-    getAuthHeaders: (routeType) => ({
-      /* headers */
-    }),
-    getQueryContext: (routeType) => ({ headers: getAuthHeaders(routeType) })
-  };
-}
-```
-
-### 2. **Environment-Aware Authentication**:
-
-```typescript
-// Different auth strategies per environment
-const getAuthHeaders = (routeType: RouteType) => {
-  if (environment === 'local') {
-    return { 'x-api-key': process.env.NEXT_PUBLIC_APPSYNC_API_KEY };
-  }
-
-  if (routeType === 'public') {
-    return { 'x-api-key': process.env.NEXT_PUBLIC_APPSYNC_API_KEY };
-  }
-
-  if (tokens.accessToken) {
-    return { Authorization: `Bearer ${tokens.accessToken}` };
-  }
-};
-```
-
-### 3. **Local Development Interceptor**:
-
-```typescript
-// Generic interceptor for local development
-export function useLocalRequestInterceptor() {
+export function useLocalInterceptor() {
   const { environment } = useAuth();
-  const searchParams = useSearchParams();
-  const visitorParam = searchParams?.get('visitor');
-
-  // Should intercept if in local environment with visitor parameter
-  const shouldIntercept = environment === 'local' && !!visitorParam;
+  const visitorId = useSearchParams()?.get('visitor');
+  const shouldIntercept = environment === 'local' && !!visitorId;
 
   return {
     shouldIntercept,
-    getAdvocateGreetingMock: () => ({
-      linkId: 'local-interceptor',
-      companyName: 'Local Demo Company',
-      recruiterName: `Local Visitor ${visitorParam?.substring(0, 6)}`,
-      context: 'local development',
-      greeting: 'Welcome to local development!',
-      message: 'This is mock data from the local request interceptor.',
-      skills: ['React', 'TypeScript', 'AWS', 'Node.js', 'GraphQL']
+    getMockData: () => ({
+      name: `Test Visitor ${visitorId}`,
+      message: 'Mock data for local development',
     }),
-    getAIAdvocateMock: (question) => ({
-      answer: 'This is a simulated AI response for local development.',
-      context: 'Local interceptor response'
-    })
   };
 }
 ```
 
-### 4. **Hook-Based Data Fetching**:
+Components check the interceptor first, falling back to real data:
 
 ```typescript
-// All data fetching uses centralized auth
-export function useAdvocateGreeting() {
-  const { isAuthenticated, getQueryContext } = useAuth();
+function PersonalizedContent() {
+  const interceptor = useLocalInterceptor();
+  const { data } = useRealData();
 
-  const { data, loading, error } = useQuery(GET_ADVOCATE_GREETING, {
-    skip: !isAuthenticated,
-    fetchPolicy: 'cache-and-network',
-    context: getQueryContext('protected')
-  });
+  const content = interceptor.shouldIntercept
+    ? interceptor.getMockData()
+    : data;
 
-  return {
-    greetingData: data?.getAdvocateGreeting,
-    isLoading: loading,
-    error: error?.message || null,
-    isAuthenticated
-  };
+  return <div>{content.message}</div>;
 }
 ```
 
-### 5. **Environment Management**:
+---
 
-- **Local**: `NEXT_PUBLIC_ENVIRONMENT=local` (set in dev script)
-- **Deployed Dev**: `NEXT_PUBLIC_ENVIRONMENT=dev` (set in deploy script)
-- **Production**: `NEXT_PUBLIC_ENVIRONMENT=prod` (set in deploy script)
+## When NOT to Use
 
-### 6. **Component Integration**:
+- **Sensitive data**: This pattern is for personalization, not for protecting highly sensitive information
+- **Long-lived sessions**: Token-based links are best for short interactions, not persistent accounts
+- **Complex auth flows**: If you need MFA, password reset, or role management, use a full auth provider
 
-```typescript
-// Example of how components integrate with the auth system
-function AdvocateGreetingComponent() {
-  // Check for local interception first
-  const interceptor = useLocalRequestInterceptor();
-  const { isAuthenticated } = useAuth();
+---
 
-  // Use the standard query if authenticated
-  const { greetingData: realGreetingData, isLoading } = useAdvocateGreeting();
+## Related Patterns
 
-  // Use interceptor data if available, otherwise use real data
-  const greetingData = interceptor.shouldIntercept
-    ? interceptor.getAdvocateGreetingMock()
-    : realGreetingData;
-
-  // Component rendering logic...
-}
-```
-
-This authentication architecture provides a seamless, secure experience for visitors while maintaining strict access control and personalization capabilities. The local development mode allows for rapid UI development without needing real authentication tokens.
-
-## Related Documentation
-
-- [Frontend Architecture](frontend.md) - How the frontend integrates with the authentication system
-- [Infrastructure Architecture](infrastructure/overview.md) - How the infrastructure supports the authentication system
-- [Local Development Guide](../guides/local-development.md) - How to use the local development mode
+- Static Frontend Hosting — The hosting infrastructure this auth pattern runs on
+- Environment Deployment Strategy — How environments affect auth configuration
