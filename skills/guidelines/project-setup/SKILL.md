@@ -27,6 +27,7 @@ New projects are created from blueprints stored at `loxosceles/project-blueprint
 ## Rules
 
 - Execute in the current directory (must be empty or an empty git repo)
+- Git remotes must use SSH, never HTTPS: `git@github.com:user/repo.git`
 - Never skip verification steps
 - If a step fails, present the error with options — don't silently retry
 - Template variables use `{{double_braces}}` syntax
