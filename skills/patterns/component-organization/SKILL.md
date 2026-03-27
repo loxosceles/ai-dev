@@ -8,41 +8,44 @@ type: pattern
 
 **This is a reference pattern.** Learn from the approach, adapt to your context — don't copy verbatim.
 
-**Problem**: Frontend projects grow into flat directories with hundreds of files, making it hard to find related code or understand feature boundaries.
+**Problem**: Frontend projects grow into disorganized directories where related files are hard to find and shared code has no clear home.
 
-**Solution**: Organize by feature/domain, colocate related files, and separate shared utilities from feature-specific code.
+**Solution**: Organize by type (components, hooks, lib, types), with subdirectories for grouping related items within each type.
 
 ---
 
 ## Pattern
-
-**Principle**: Organize by feature or domain, not by file type.
 
 ```
 frontend/
 ├── app/                 # Framework routing (Next.js app dir, Nuxt pages, etc.)
 │   ├── layout.tsx
 │   └── page.tsx
-├── components/          # Reusable UI components
-│   ├── ui/              # Base primitives (Button, Input, Modal, etc.)
-│   ├── header.tsx
-│   ├── footer.tsx
-│   └── ...
-├── lib/                 # Feature modules and hooks
-│   ├── auth/            # Authentication context, hooks, utilities
-│   ├── notifications/   # Notification service, hooks
-│   └── dashboard/       # Dashboard-specific logic
+├── components/          # All components
+│   ├── ui/              # Base primitives (Button, Input, Modal)
+│   ├── UserProfile.tsx
+│   ├── DashboardChart.tsx
+│   └── PostCard.tsx
+├── hooks/               # Custom hooks
+│   ├── use-auth.ts
+│   ├── use-dashboard.ts
+│   └── use-debounce.ts
+├── lib/                 # Utilities, services, business logic
+│   ├── api/             # API client, fetch helpers
+│   ├── auth/            # Auth context, cookie handling
+│   └── utils/           # Pure helper functions
 ├── queries/             # Data fetching (GraphQL queries, API calls)
-├── shared/              # Cross-cutting types, constants, helpers
-│   ├── types.ts
-│   └── constants.ts
+├── types/               # Shared type definitions
+│   ├── user.ts
+│   └── post.ts
 └── public/              # Static assets
 ```
 
 **Key Rules**:
-- **Feature directories** in `lib/` contain hooks, services, and utilities for one domain
-- **Components** that belong to a single feature live in that feature's `lib/` directory
-- **Shared components** used across features live in `components/`
+- **Components** live in `components/`, grouped by subdirectory when related (e.g., `ui/`)
+- **Hooks** live in `hooks/`, one hook per file
+- **Business logic** lives in `lib/`, organized by domain subdirectory
+- **Types** shared across files live in `types/`
 - **Base UI primitives** (buttons, inputs, modals) live in `components/ui/`
 
 ---
@@ -50,88 +53,24 @@ frontend/
 ## Why This Pattern?
 
 **Benefits**:
-- **Discoverability**: Related code lives together — find a feature's hook, service, and types in one directory
-- **Encapsulation**: Feature boundaries are visible in the file tree
-- **Scalability**: Adding a feature means adding a directory, not scattering files across the tree
-- **Deletability**: Removing a feature is removing a directory
+- **Predictable**: Know exactly where to look — all hooks in `hooks/`, all components in `components/`
+- **Reusability**: Components used across multiple features are easy to find and share
+- **Scalability**: Adding a new hook or component has an obvious home
+- **Natural for component libraries**: Matches how shared UI kits are structured
 
-**Anti-pattern — organizing by file type**:
-```
-# ❌ Hard to find related code
-components/
-  DashboardChart.tsx
-  NotificationBell.tsx
-  UserProfile.tsx
-hooks/
-  useDashboard.ts
-  useNotifications.ts
-  useProfile.ts
-services/
-  dashboardService.ts
-  notificationService.ts
-  profileService.ts
-```
-
----
-
-## Feature Module Structure
-
-Each feature directory in `lib/` follows a consistent internal structure:
-
-```
-lib/auth/
-├── auth-context.tsx      # React context provider
-├── use-auth.ts           # Primary hook for consumers
-├── auth-utils.ts         # Pure helper functions
-└── types.ts              # Feature-specific types (optional)
-```
-
-**Conventions**:
-- One primary hook per feature (`use-{feature}.ts`) — this is the public API
-- Context providers live alongside their hooks
-- Utility functions are pure and testable
-- Feature-specific types stay in the feature directory; shared types go to `shared/types.ts`
-
----
-
-## Data Fetching Layer
-
-Separate data fetching definitions from feature logic:
-
-```
-queries/
-├── users.ts              # User-related queries/mutations
-└── dashboard.ts          # Dashboard data queries
-```
-
-Features consume these through hooks:
-
-```typescript
-// lib/dashboard/use-dashboard.ts
-import { getDashboardData } from '@/queries/dashboard';
-
-export function useDashboard() {
-  const { data, loading, error } = useQuery(getDashboardData);
-  return { metrics: data?.metrics, isLoading: loading };
-}
-```
-
-This keeps data fetching definitions reusable across features while keeping consumption logic colocated with the feature.
+**When to use subdirectories within a type**:
+- `components/ui/` — base primitives reused everywhere
+- `lib/auth/` — multiple files for one domain (context + utils + types)
+- `lib/api/` — API client, interceptors, helpers
 
 ---
 
 ## When to Split
 
-- **New directory in `lib/`**: When a feature has 2+ files (hook + service, or hook + context)
-- **New file in `components/`**: When a component is used by 2+ features
+- **New file in `components/`**: When UI is reused or the parent component exceeds ~200 lines
+- **New file in `hooks/`**: When stateful logic is reused or clutters a component
+- **New subdirectory in `lib/`**: When a domain has 2+ related files (service + utils, context + helpers)
 - **Move to `components/ui/`**: When a component is purely presentational with no business logic
-
----
-
-## Related Patterns
-
-- Core Principles — Separation of concerns, pure functions
-- Frontend Code Quality — Code style within components
 
 ---
 
