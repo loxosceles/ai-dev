@@ -14,7 +14,34 @@ Guidelines for AI agents when executing commands and running scripts.
 
 ## Core Rules
 
-### 1. Use Project's Developer API
+### 1. Never Run Project Tools on the Host Machine
+
+**The host machine stays pristine.** All project tools (pnpm, npm, python, pip, pytest, cargo, etc.) live inside devcontainers. Never install packages, run builds, or execute project commands directly on the host.
+
+**If you need to run something in a project, use the devcontainer:**
+
+```bash
+# ✅ Correct: execute inside the container
+docker exec -it <container_name> pnpm install
+docker exec -it <container_name> pnpm build
+docker exec -it <container_name> pytest
+
+# ❌ NEVER: run project tools on the host
+pnpm install          # installs to host, pollutes system
+pip install requests  # modifies host Python
+npm run build         # uses host Node version, may differ from container
+```
+
+**Exceptions** (tools that are OK on the host):
+- `git` — version control is host-level
+- `docker` / `docker compose` — managing containers
+- `gh` — GitHub CLI for repo operations
+- `npx skills` — skill installation (doesn't modify project deps)
+- File operations (`cat`, `ls`, `grep`, `find`, etc.)
+
+**When working across multiple projects from outside containers**, limit yourself to reading files, git operations, and docker commands. If you need to build/test/install, exec into the container.
+
+### 2. Use Project's Developer API
 
 **Always use root `package.json` scripts:**
 
