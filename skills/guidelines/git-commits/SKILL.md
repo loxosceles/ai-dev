@@ -258,3 +258,9 @@ git checkout -b task-1-2-database
 ❌ Don't push (developer controls when)
 ❌ Don't modify files unless asked
 ❌ Don't guess at changes - always analyze actual diffs
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

@@ -134,3 +134,9 @@ Before committing, verify:
 **Related**:
 - [Core Principles - Security Baseline](../CORE_PRINCIPLES.md#8-security-baseline)
 - [SSM Parameter Store Configuration](../patterns/configuration/ssm-parameter-store-configuration.md)
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

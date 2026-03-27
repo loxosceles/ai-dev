@@ -157,3 +157,9 @@ ssm-params export-service dev frontend > .env
 - [Environment Validation](../infrastructure/environment-validation.md) - Validate config early
 - [Environment Deployment Strategy](../infrastructure/environment-deployment-strategy.md) - How environments are deployed
 - [Security Baseline](../../CORE_PRINCIPLES.md#8-security-baseline) - Secret management principles
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

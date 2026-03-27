@@ -120,3 +120,32 @@ Be direct. Use imperative form. Avoid explaining why at length — guidelines ar
 - [ ] No project-specific details (names, tables, endpoints)
 - [ ] Code examples are minimal and use placeholders
 - [ ] Document is scannable (headers, bullets, bold)
+- [ ] Ends with Progressive Improvement section
+
+---
+
+## Progressive Improvement
+
+Every skill must end with this section:
+
+```markdown
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.
+```
+
+This enables skills to evolve through use. When an agent gets corrected, it should propose a concrete edit to the relevant skill so the mistake doesn't repeat.
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

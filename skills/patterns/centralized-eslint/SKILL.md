@@ -396,3 +396,9 @@ grep -r '"lint":' */package.json
 
 - **[CLI Architecture](../infrastructure/cli-architecture-pattern.md)** - Understanding CLI tiers for console.log rules
 - **[Environment Validation](../infrastructure/environment-validation.md)** - Fail-fast validation patterns
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

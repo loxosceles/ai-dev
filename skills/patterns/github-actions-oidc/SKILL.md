@@ -745,3 +745,9 @@ Migrating from static credentials to OIDC:
 - [aws-actions/configure-aws-credentials](https://github.com/aws-actions/configure-aws-credentials)
 - [GitHub OIDC Token Claims](https://docs.github.com/en/actions/deployment/security-hardening-with-openid-connect#understanding-the-oidc-token)
 - [AWS Security Blog: Use IAM roles to connect GitHub Actions](https://aws.amazon.com/blogs/security/use-iam-roles-to-connect-github-actions-to-actions-in-aws/)
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

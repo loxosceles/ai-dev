@@ -772,3 +772,9 @@ ENVIRONMENT=prod ./deploy.sh
 **Validation**: Deploy both dev and prod to same account and verify no conflicts.
 
 **Remember**: This is not optional. It's a critical pattern that prevents production incidents and enables clear resource management.
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

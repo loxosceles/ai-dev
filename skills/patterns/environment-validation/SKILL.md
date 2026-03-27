@@ -110,3 +110,9 @@ This ensures all CLI commands validate environment before executing business log
 - [Configuration Management](../../CORE_PRINCIPLES.md#7-configuration-management)
 - [Error Handling](../../CORE_PRINCIPLES.md#8-error-handling)
 - [Security Baseline](../../CORE_PRINCIPLES.md#9-security-baseline)
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

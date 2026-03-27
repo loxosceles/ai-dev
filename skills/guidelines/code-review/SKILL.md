@@ -118,3 +118,9 @@ Numbered list of specific changes with file references
 3. **Prioritize** - Critical → Improvements → Suggestions
 4. **Be specific** - Reference files, patterns, and principles
 5. **Be constructive** - Acknowledge good patterns, explain reasoning
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

@@ -177,3 +177,9 @@ phases:
 - [Link-Based Authentication](../authentication/patterns.md) - How to implement the auth tokens
 - [Environment Deployment Strategy](environment-deployment-strategy.md) - How to deploy across environments
 - [CDK Stack Organization](cdk-stack-organization.md) - Managing multi-region stacks
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

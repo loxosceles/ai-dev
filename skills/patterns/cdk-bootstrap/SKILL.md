@@ -293,3 +293,9 @@ CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/abc123
 - **[SSM Runtime Configuration](../configuration/ssm-runtime-configuration.md)** - How services consume runtime configuration from SSM (this pattern writes to SSM, that pattern reads from it)
 - **[Environment Validation](environment-validation.md)** - Fail-fast validation patterns used in the `validateBootstrap()` method
 - **[Environment Deployment Strategy](environment-deployment-strategy.md)** - Multi-environment deployment approach that defines what "dev", "prod", etc. mean
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

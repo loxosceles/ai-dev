@@ -399,3 +399,9 @@ params-get:
 
 - [Pure Functions](../../CORE_PRINCIPLES.md#1-prefer-pure-functions) - Apply to helper functions
 - [Error Handling](../../CORE_PRINCIPLES.md#7-error-handling) - Fail fast on configuration errors
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

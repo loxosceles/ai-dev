@@ -121,3 +121,9 @@ catch (err) { console.error(err); }
 - Fetch secrets at runtime, not build time
 - Prefer IAM roles over hardcoded credentials
 - Separate resources and secrets per environment
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

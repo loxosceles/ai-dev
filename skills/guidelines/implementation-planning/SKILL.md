@@ -310,3 +310,9 @@ No separate completion checklist in phase documents — tracking happens only in
 - **Reversible**: Each step ends with git commit for easy reset
 - **Explicit**: No assumptions, document everything
 - **Trackable**: Clear progress indicators at all times
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

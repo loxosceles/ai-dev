@@ -229,3 +229,9 @@ const prodPipeline = new codepipeline.Pipeline(this, 'ProdPipeline', {
 - [Resource Naming](resource-naming.md) - How to name resources per environment
 - [Environment Validation](environment-validation.md) - Validate environment config early
 - [Static Frontend Hosting](static-frontend-hosting.md) - Deployment pipeline example
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

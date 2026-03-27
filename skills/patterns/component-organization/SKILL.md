@@ -132,3 +132,9 @@ This keeps data fetching definitions reusable across features while keeping cons
 
 - Core Principles — Separation of concerns, pure functions
 - Frontend Code Quality — Code style within components
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

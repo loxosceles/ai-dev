@@ -89,3 +89,9 @@ cd frontend && pnpm add eslint
 4. ✅ Use `working_dir` parameter for direct execution
 
 **Remember**: Root scripts are the project's public API. Bypassing them breaks the contract.
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

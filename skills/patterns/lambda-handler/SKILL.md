@@ -324,3 +324,9 @@ function processEvent(
 - [Core Principles](../../CORE_PRINCIPLES.md) - Ordering, purity, error handling
 - [Environment Validation](environment-validation.md) - Validating required config
 - [Resource Naming](resource-naming.md#lambda-layer-code-organization) - Lambda layer organization
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.

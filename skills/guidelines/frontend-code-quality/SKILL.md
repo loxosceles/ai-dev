@@ -329,3 +329,9 @@ frontend/
 ---
 
 **For AI Assistants**: Follow these guidelines when writing or reviewing frontend code. Prioritize clarity and maintainability over cleverness.
+
+---
+
+## Progressive Improvement
+
+If the developer corrects a behavior that this skill should have prevented, suggest a specific amendment to this skill to prevent the same correction in the future.
