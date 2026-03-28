@@ -96,8 +96,13 @@ Work through the plan category by category. After each category, commit the chan
 
 #### Skills
 
-- Run `npx skills add loxosceles/ai-dev --yes`.
-- **Clean up unwanted agent directories.** The skills installer creates directories for every supported agent (`.augment/`, `.roo/`, `.windsurf/`, dozens more). Delete all of them — only keep `.agents/`, `.kiro/`, `.claude/`. The `.github/` and `.amazonq/` directories are managed separately and should not be touched.
+- **Use the `--agent` flag to limit installation to only the agents we use:**
+  ```bash
+  npx skills add loxosceles/ai-dev --agent claude-code kiro-cli -y
+  ```
+  Without `--agent`, using `--yes` installs for ALL agents (dozens of directories). Without `--yes`, it prompts interactively (won't work in scripts).
+- The `skills/` directory is always created by the installer as a symlink convenience folder. It cannot be prevented — just gitignore it.
+- `.gitignore` must include: `.agents/`, `.claude/skills/`, `.kiro/skills/`, `skills/`
 - Ask about additional third-party skills (e.g., `anthropics/claude-code`, `browser-use/browser-use`).
 
 #### Husky & Lint-Staged
