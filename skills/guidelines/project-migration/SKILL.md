@@ -61,17 +61,27 @@ Work through the plan category by category. After each category, commit the chan
   - **Structurally different** (custom volumes, extra packages, different base image): present both versions and ask which parts to keep.
 - Create `.devcontainer/.env` from template. Ask for `PROJECT_NAME`, `GIT_NAME`, `GIT_EMAIL` if not inferrable from git config.
 - Replace `{{project_name}}` in all fragment files.
+- **Pre-create host mount targets.** Docker creates missing mount sources as root-owned directories, which breaks permissions and turns file mounts into directories. After creating the devcontainer files, run:
+  ```bash
+  PROJECT=<project-name>
+  mkdir -p ~/.devcontainer-config/cache/${PROJECT}/claude
+  mkdir -p ~/.devcontainer-config/data/${PROJECT}
+  touch ~/.devcontainer-config/data/${PROJECT}/zsh_history
+  touch ~/.devcontainer-config/data/${PROJECT}/zsh_history_tmux
+  ```
 
 #### Linting & Formatting
 
 - If no eslint/prettier config exists, copy fragments.
 - If configs exist, present the diff and ask: replace with standard, merge, or skip.
+- **Preserve project-specific eslint blocks.** The fragment eslint config is a baseline. If the project has additional blocks (e.g., `cli/**/*.ts`), keep them when replacing — merge the fragment with the project-specific additions.
 - Check `package.json` for required devDependencies (eslint, prettier, husky, lint-staged). Add missing ones.
 
 #### CI/CD
 
 - If `.github/workflows/` does not exist, copy all workflow fragments.
 - If workflows exist, compare each one. Present diffs for any that differ from fragments.
+- **Note:** If the project uses a newer version of a CI action than the fragment (e.g., `pnpm/action-setup@v5` vs fragment's `@v4`), keep the newer version and flag the fragment as needing an update.
 
 #### Editor Config
 
@@ -87,6 +97,7 @@ Work through the plan category by category. After each category, commit the chan
 #### Skills
 
 - Run `npx skills add loxosceles/ai-dev --yes`.
+- **Clean up unwanted agent directories.** The skills installer creates directories for every supported agent (`.augment/`, `.roo/`, `.windsurf/`, dozens more). Delete all of them — only keep `.agents/`, `.kiro/`, `.claude/`. The `.github/` and `.amazonq/` directories are managed separately and should not be touched.
 - Ask about additional third-party skills (e.g., `anthropics/claude-code`, `browser-use/browser-use`).
 
 #### Husky & Lint-Staged
