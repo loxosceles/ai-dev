@@ -65,9 +65,13 @@ Work through the plan category by category. After each category, commit the chan
   ```bash
   PROJECT=<project-name>
   mkdir -p ~/.devcontainer-config/cache/${PROJECT}/claude
+  mkdir -p ~/.devcontainer-config/cache/${PROJECT}/kiro/agents
+  mkdir -p ~/.devcontainer-config/cache/${PROJECT}/kiro/settings
   mkdir -p ~/.devcontainer-config/data/${PROJECT}
   touch ~/.devcontainer-config/data/${PROJECT}/zsh_history
   touch ~/.devcontainer-config/data/${PROJECT}/zsh_history_tmux
+  cp ~/.devcontainer-config/ai/agents/kiro/*.json ~/.devcontainer-config/cache/${PROJECT}/kiro/agents/
+  echo '{"chat.defaultAgent":"lead-dev"}' > ~/.devcontainer-config/cache/${PROJECT}/kiro/settings/cli.json
   ```
 
 #### Linting & Formatting
@@ -94,7 +98,7 @@ Work through the plan category by category. After each category, commit the chan
 - `.gitignore`: merge — append missing entries from the fragment, never remove existing entries.
 - `.npmrc`, `.envrc`, `.env_TEMPLATE`: copy if missing, ask if existing version differs.
 
-#### Skills
+#### Skills & Kiro CLI
 
 - **Use the `--agent` flag to limit installation to only the agents we use:**
   ```bash
@@ -104,6 +108,8 @@ Work through the plan category by category. After each category, commit the chan
 - The `skills/` directory is always created by the installer as a symlink convenience folder. It cannot be prevented — just gitignore it.
 - `.gitignore` must include: `.agents/`, `.claude/skills/`, `.kiro/skills/`, `skills/`
 - Ask about additional third-party skills (e.g., `anthropics/claude-code`, `browser-use/browser-use`).
+- Custom agents require `"resources": ["skill://.kiro/skills/**/SKILL.md"]` to auto-discover skills. Use agent fragments from `project-blueprints/fragments/agents/kiro/` which already include this.
+- Agent configs are copied into `~/.devcontainer-config/cache/${PROJECT}/kiro/agents/` during pre-creation (see Devcontainer section). Never copy agent configs into the project's `.kiro/agents/` — that causes conflicts with the host's global `~/.kiro/agents/`.
 
 #### Husky & Lint-Staged
 
@@ -146,6 +152,7 @@ Present a summary of everything that was done:
 - If a fragment doesn't work with the project's current tool versions, report the conflict and ask
 - Never modify source code files (components, pages, lib, etc.) — only infrastructure and config
 - Never remove entries from `.gitignore` — only append
+- **Consistency with `project-setup`**: This skill and `project-setup` must produce identical results for shared concerns (devcontainer, skills, kiro, linting, CI/CD). If you detect a discrepancy between what this skill instructs and what `project-setup` does, stop and warn the developer before proceeding.
 
 ---
 
