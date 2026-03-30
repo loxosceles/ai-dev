@@ -17,7 +17,7 @@ Migrate an existing project to the current infrastructure and tooling standards.
 - **Never overwrite without asking.** If a config file already exists, present a diff of what would change and ask before replacing.
 - **Work on a branch.** All changes happen on a dedicated branch. Rollback is a branch reset.
 - **Ask early, not late.** When intent is ambiguous (e.g., a custom eslint config that partially overlaps with the standard), ask whether to merge, replace, or skip. Do not assume.
-- **Fragments are the source of truth.** Use fragment files from `loxosceles/project-blueprints` for all standard configs. Do not improvise alternatives.
+- **Fragments are the source of truth.** Use fragment files from `loxosceles/project-blueprints` for all standard configs. Common fragments (`fragments/common/`) are assembled with stack-specific injections (`fragments/injections/{stack}/`) and Dockerfiles (`fragments/dockerfiles/{stack}/`). The result is one clean file per output — no runtime includes or sourcing. Do not improvise alternatives.
 
 ---
 

@@ -19,10 +19,11 @@ New projects are created from blueprints stored at `loxosceles/project-blueprint
 3. **Collect variables**: Ask for `project_name`, `git_name`, `git_email`, and any other values the blueprint requires.
 4. **Execute sections in order**: Follow the blueprint step by step.
 5. **Copy fragments verbatim**: Fragment files from `fragments/` are exact configs. Copy them, then replace `{{template_variables}}` with actual values.
-6. **Pause on version mismatches**: If a tool (create-next-app, SST, etc.) has a new major version compared to what the blueprint specifies, stop and ask: "Should I evaluate the upgrade or use the pinned version?"
-7. **Never silently modify fragments**: If a fragment doesn't work with current tool versions, report the conflict and ask.
-8. **Run verification**: Execute all verification commands at the end. All must pass.
-9. **Install skills and configure Kiro CLI**:
+6. **Assemble stack-specific files**: Common fragments (`fragments/common/`) contain `{{INJECTION_MARKERS}}`. Read the matching injection snippets from `fragments/injections/{stack}/` and insert them at the marked points. Pick the Dockerfile from `fragments/dockerfiles/{stack}/`. The result is one clean file per output — no runtime includes or sourcing. For `devcontainer.json`, merge the injection's extensions and settings into the common base.
+7. **Pause on version mismatches**: If a tool (create-next-app, SST, etc.) has a new major version compared to what the blueprint specifies, stop and ask: "Should I evaluate the upgrade or use the pinned version?"
+8. **Never silently modify fragments**: If a fragment doesn't work with current tool versions, report the conflict and ask.
+9. **Run verification**: Execute all verification commands at the end. All must pass.
+10. **Install skills and configure Kiro CLI**:
     - Run `npx skills add loxosceles/ai-dev --agent claude-code kiro-cli -y` and ask about additional third-party skills.
     - Copy agent fragments from `project-blueprints/fragments/agents/kiro/` into `~/.devcontainer-config/cache/${PROJECT}/kiro/agents/`. Custom agents require `"resources": ["skill://.kiro/skills/**/SKILL.md"]` to auto-discover skills — the fragments already include this.
     - Pre-create all host mount targets (Docker creates missing sources as root-owned, breaking permissions):
