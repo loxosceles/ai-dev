@@ -18,6 +18,7 @@ Migrate an existing project to the current infrastructure and tooling standards.
 - **Work on a branch.** All changes happen on a dedicated branch. Rollback is a branch reset.
 - **Ask early, not late.** When intent is ambiguous (e.g., a custom eslint config that partially overlaps with the standard), ask whether to merge, replace, or skip. Do not assume.
 - **Fragments are the source of truth.** Use fragment files from `loxosceles/project-blueprints` for all standard configs. Common fragments (`fragments/common/`) are assembled with stack-specific injections (`fragments/injections/{stack}/`) and Dockerfiles (`fragments/dockerfiles/{stack}/`). The result is one clean file per output — no runtime includes or sourcing. Do not improvise alternatives.
+- **`devcontainer-state` is the shared config repo.** All containers mount from `~/.devcontainer-state` (overridable via `DEVCONTAINER_STATE` env var). SSH and AWS use `${SSH_PATH:-~/.ssh}` and `${AWS_PATH:-~/.aws}`. All mounts are directories — no file mounts.
 
 ---
 
@@ -61,17 +62,12 @@ Work through the plan category by category. After each category, commit the chan
   - **Structurally different** (custom volumes, extra packages, different base image): present both versions and ask which parts to keep.
 - Create `.devcontainer/.env` from template. Ask for `PROJECT_NAME`, `GIT_NAME`, `GIT_EMAIL` if not inferrable from git config.
 - Replace `{{project_name}}` in all fragment files.
-- **Pre-create host mount targets.** Docker creates missing mount sources as root-owned directories, which breaks permissions and turns file mounts into directories. After creating the devcontainer files, run:
+- **Pre-create host mount targets.** Only per-project cache directories need pre-creation (Docker creates them correctly as directories). The shared `data/zsh_history_tmux/` directory already exists in the `devcontainer-state` repo via `.gitkeep`. After creating the devcontainer files, run:
   ```bash
   PROJECT=<project-name>
-  mkdir -p ~/.devcontainer-config/cache/${PROJECT}/claude
-  mkdir -p ~/.devcontainer-config/cache/${PROJECT}/kiro/agents
-  mkdir -p ~/.devcontainer-config/cache/${PROJECT}/kiro/settings
-  mkdir -p ~/.devcontainer-config/data/${PROJECT}
-  touch ~/.devcontainer-config/data/${PROJECT}/zsh_history
-  touch ~/.devcontainer-config/data/${PROJECT}/zsh_history_tmux
-  cp ~/.devcontainer-config/ai/agents/kiro/*.json ~/.devcontainer-config/cache/${PROJECT}/kiro/agents/
-  echo '{"chat.defaultAgent":"lead-dev"}' > ~/.devcontainer-config/cache/${PROJECT}/kiro/settings/cli.json
+  mkdir -p ~/.devcontainer-state/cache/${PROJECT}/claude
+  mkdir -p ~/.devcontainer-state/cache/${PROJECT}/kiro/agents
+  mkdir -p ~/.devcontainer-state/cache/${PROJECT}/kiro/settings
   ```
 
 #### Linting & Formatting
@@ -98,18 +94,19 @@ Work through the plan category by category. After each category, commit the chan
 - `.gitignore`: merge — append missing entries from the fragment, never remove existing entries.
 - `.npmrc`, `.envrc`, `.env_TEMPLATE`: copy if missing, ask if existing version differs.
 
-#### Skills & Kiro CLI
+#### Skills & Agents
 
 - **Use the `--agent` flag to limit installation to only the agents we use:**
   ```bash
-  npx skills add loxosceles/ai-dev --agent claude-code kiro-cli -y
+  npx skills add loxosceles/ai-dev --agent claude-code github-copilot codex kiro-cli -y
   ```
   Without `--agent`, using `--yes` installs for ALL agents (dozens of directories). Without `--yes`, it prompts interactively (won't work in scripts).
 - The `skills/` directory is always created by the installer as a symlink convenience folder. It cannot be prevented — just gitignore it.
 - `.gitignore` must include: `.agents/`, `.claude/skills/`, `.kiro/skills/`, `skills/`
 - Ask about additional third-party skills (e.g., `anthropics/claude-code`, `browser-use/browser-use`).
-- Custom agents require `"resources": ["skill://.kiro/skills/**/SKILL.md"]` to auto-discover skills. Use agent fragments from `project-blueprints/fragments/agents/kiro/` which already include this.
-- Agent configs are copied into `~/.devcontainer-config/cache/${PROJECT}/kiro/agents/` during pre-creation (see Devcontainer section). Never copy agent configs into the project's `.kiro/agents/` — that causes conflicts with the host's global `~/.kiro/agents/`.
+- **Kiro agents** are seeded from `devcontainer-state/ai/agents/kiro/` into `~/.kiro/agents/` by `post_create.sh` on first run. They persist in the per-project kiro cache mount.
+- **Codex agents** are symlinked from `devcontainer-state/ai/agents/codex/` into `.github/agents/` by `post_create.sh` on every container start. `.github/agents/` is gitignored.
+- Both agent mounts are overridable via `KIRO_AGENTS` and `CODEX_AGENTS` env vars in `.devcontainer/.env`.
 
 #### Husky & Lint-Staged
 
