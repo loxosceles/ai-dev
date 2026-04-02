@@ -29,7 +29,7 @@ Migrate an existing project to the current infrastructure and tooling standards.
 1. **Identify the project type.** Ask the user what stack this is (e.g., Next.js + SST, Python services, static frontend). This determines which blueprint to reference.
 2. **Read the matching blueprint** from `loxosceles/project-blueprints` to understand the target state.
 3. **Audit the current project.** Check for the existence and content of:
-   - `.devcontainer/` (Dockerfile, docker-compose.yml, devcontainer.json, post_create.sh)
+   - `.devcontainer/` (Dockerfile, docker-compose.yml, devcontainer.json, post_create.sh, post_start.sh)
    - Linting/formatting (eslint config, prettier config, .prettierignore)
    - CI/CD (`.github/workflows/`)
    - Editor config (`.vscode/settings.json`)
@@ -37,6 +37,7 @@ Migrate an existing project to the current infrastructure and tooling standards.
    - Skills setup (`skills-lock.json`, `.agents/`)
    - Husky / lint-staged
    - Docs structure (`docs/`)
+   - MCP server config (`~/.devcontainer-state/ai/mcp/servers.json`)
 4. **Present a migration plan.** List every file that will be added, updated, or left alone. Group by category (devcontainer, linting, CI/CD, etc.). For each existing file that would change, note whether it's a replace, merge, or skip — and flag items that need user input.
 
 Do not proceed past this phase without user confirmation of the plan.
@@ -69,6 +70,11 @@ Work through the plan category by category. After each category, commit the chan
   mkdir -p ~/.devcontainer-state/cache/${PROJECT}/kiro/agents
   mkdir -p ~/.devcontainer-state/cache/${PROJECT}/kiro/settings
   ```
+- **Verify MCP server config.** Check that `~/.devcontainer-state/ai/mcp/servers.json` exists. If not, warn the user to copy from `servers.json.template` and add credentials.
+- **Verify devcontainer scripts.** The setup uses two scripts:
+  - `post_create.sh` — runs once after container creation (validation, symlinks, git identity, agent seeding, skills restore)
+  - `post_start.sh` — runs on every container start (Claude CLI install/update, Claude settings copy, MCP server distribution)
+  - `devcontainer.json` must have both `postCreateCommand` and `postStartCommand`.
 
 #### Linting & Formatting
 

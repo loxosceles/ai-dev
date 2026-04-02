@@ -23,22 +23,23 @@ New projects are created from blueprints stored at `loxosceles/project-blueprint
 7. **Pause on version mismatches**: If a tool (create-next-app, SST, etc.) has a new major version compared to what the blueprint specifies, stop and ask: "Should I evaluate the upgrade or use the pinned version?"
 8. **Never silently modify fragments**: If a fragment doesn't work with current tool versions, report the conflict and ask.
 9. **Run verification**: Execute all verification commands at the end. All must pass.
-10. **Install skills and configure Kiro CLI**:
-    - Run `npx skills add loxosceles/ai-dev --agent claude-code kiro-cli -y` and ask about additional third-party skills.
-    - Copy agent fragments from `project-blueprints/fragments/agents/kiro/` into `~/.devcontainer-config/cache/${PROJECT}/kiro/agents/`. Custom agents require `"resources": ["skill://.kiro/skills/**/SKILL.md"]` to auto-discover skills — the fragments already include this.
+10. **Install skills and configure agents**:
+    - Run `npx skills add loxosceles/ai-dev --agent claude-code github-copilot codex kiro-cli -y` and ask about additional third-party skills.
     - Pre-create all host mount targets (Docker creates missing sources as root-owned, breaking permissions):
       ```bash
       PROJECT=<project-name>
-      mkdir -p ~/.devcontainer-config/cache/${PROJECT}/claude
-      mkdir -p ~/.devcontainer-config/cache/${PROJECT}/kiro/agents
-      mkdir -p ~/.devcontainer-config/cache/${PROJECT}/kiro/settings
-      mkdir -p ~/.devcontainer-config/data/${PROJECT}
-      touch ~/.devcontainer-config/data/${PROJECT}/zsh_history
-      touch ~/.devcontainer-config/data/${PROJECT}/zsh_history_tmux
-      cp ~/.devcontainer-config/ai/agents/kiro/*.json ~/.devcontainer-config/cache/${PROJECT}/kiro/agents/
-      echo '{"chat.defaultAgent":"lead-dev"}' > ~/.devcontainer-config/cache/${PROJECT}/kiro/settings/cli.json
+      mkdir -p ~/.devcontainer-state/cache/${PROJECT}/claude
+      mkdir -p ~/.devcontainer-state/cache/${PROJECT}/kiro/agents
+      mkdir -p ~/.devcontainer-state/cache/${PROJECT}/kiro/settings
       ```
+    - Kiro agents are seeded from `~/.devcontainer-state/ai/agents/kiro/` into `~/.kiro/agents/` by `post_create.sh` on first run. They persist in the per-project kiro cache mount.
+    - Codex agents are symlinked from `~/.devcontainer-state/ai/agents/codex/` into `.github/agents/` by `post_create.sh` on every container start. `.github/agents/` is gitignored.
+    - Both agent mounts are overridable via `KIRO_AGENTS` and `CODEX_AGENTS` env vars in `.devcontainer/.env`.
     - Never copy agent configs into the project's `.kiro/agents/` — that causes conflicts with the host's global `~/.kiro/agents/`.
+11. **Verify MCP server config**: Check that `~/.devcontainer-state/ai/mcp/servers.json` exists. If not, warn the user to copy from `servers.json.template`. MCP servers are distributed to all agents (Kiro, Claude, Amazon Q) by `post_start.sh` on every container start.
+12. **Verify devcontainer scripts**: The setup uses two scripts:
+    - `post_create.sh` — runs once after container creation (validation, symlinks, git identity, agent seeding, skills restore)
+    - `post_start.sh` — runs on every container start (Claude CLI install/update, Claude settings copy, MCP server distribution)
 
 ## Rules
 
