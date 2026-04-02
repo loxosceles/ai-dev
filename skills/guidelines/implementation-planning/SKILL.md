@@ -240,6 +240,7 @@ When updating the plan:
 
 When a phase is complete:
 - [ ] All steps in phase executed successfully
+- [ ] All alignment checks passed (resolve any 🟡 flags before moving on)
 - [ ] All tests passing
 - [ ] Changes committed with clear messages
 - [ ] Index.md updated to next phase
@@ -264,11 +265,40 @@ No separate completion checklist in phase documents — tracking happens only in
 2. **Read the step** — Understand what needs to be done
 3. **Execute the step** — Follow instructions exactly
 4. **Test the step** — Verify it worked
-5. **Commit the step** — Save progress with clear commit message
-6. **Update index.md** — Check off the completed step
-7. **Move to next step** — Repeat
+5. **Alignment check** — Run the sanity check (see below)
+6. **Commit the step** — Save progress with clear commit message
+7. **Update index.md** — Check off the completed step
+8. **Move to next step** — Repeat
 
 **Important:** Steps must be executed in order. Phases must be executed in order.
+
+---
+
+## Alignment Check
+
+A lightweight sanity check after testing each step and before committing. The goal is to catch drift — changes that work in isolation but don't serve the feature's goals or violate project patterns.
+
+This runs every step, so keep it focused on the latest change. Previous steps have already passed their own checks.
+
+### Procedure
+
+1. **Re-read the feature's `index.md`** — specifically the Overview, Implementation Principles, and the current phase's goal. This is a skim, not a deep read — you already have context from prior steps.
+2. **Review the uncommitted diff** (`git diff`) against three questions:
+   - **Goal alignment**: Does this change move us toward the feature goal stated in `index.md`, or did it drift into unrelated work?
+   - **Architecture fit**: Does it follow the project's established patterns? (Reference `core-principles` and any stack-specific skills.)
+   - **Scope creep**: Did this step introduce anything not described in the plan? Refactors, "while I'm here" fixes, or premature abstractions count.
+3. **Verdict** — one of:
+   - ✅ **On track** — proceed to commit.
+   - 🟡 **Minor drift** — note the concern, proceed to commit, flag it for review at phase completion.
+   - 🔴 **Off track** — do NOT commit. Enter planning mode immediately.
+
+### Rules
+
+- The check targets only the current step's diff, not the entire codebase.
+- Don't turn this into a full code review. The `code-reviewer` agent handles that separately. This is a directional check: are we still building the right thing?
+- If the agent performing the work cannot objectively assess its own output, delegate the check to the `code-reviewer` agent with the feature's `index.md` as context.
+- A 🟡 verdict must include a one-line note appended to the step's checkbox in `index.md` (e.g., `- [x] Step 2.3: Create handler 🟡 added unplanned error type — revisit at phase end`).
+- A 🔴 verdict follows the existing **Planning Mode** rules: stop, discuss, update the plan, get confirmation.
 
 ## Reordering Work
 
