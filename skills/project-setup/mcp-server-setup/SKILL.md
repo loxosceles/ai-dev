@@ -1,6 +1,6 @@
 ---
 name: mcp-server-setup
-description: How to configure MCP servers for Kiro, VS Code, and Claude in devcontainers. Follow when adding, debugging, or migrating MCP server configurations.
+description: How to configure MCP servers for Kiro, VS Code, Claude, and Amazon Q in devcontainers. Follow when adding, debugging, or migrating MCP server configurations.
 type: guideline
 ---
 
@@ -8,29 +8,27 @@ type: guideline
 
 **This is a strict guideline.** Follow these rules exactly.
 
-MCP server configuration in our devcontainer setup. Covers config file locations, format differences between agents, common pitfalls, and the install/test workflow.
+MCP server configuration in our devcontainer setup. A single source file is distributed to all agents by `post_create.sh`.
 
 ---
 
-## Config File Locations
+## Single Source of Truth
 
-Each agent reads MCP config from a different path. In our devcontainer setup, Kiro's config lives on the host (mounted into the container).
+MCP servers are defined once in `~/.devcontainer-state/ai/mcp/servers.json` (gitignored, contains credentials). A committed template exists at `servers.json.template`.
 
-| Agent | Config path (container) | Host source |
-|-------|------------------------|-------------|
-| Kiro CLI | `~/.kiro/settings/mcp.json` | `~/.devcontainer-state/cache/{project}/kiro/settings/mcp.json` |
-| VS Code | `.vscode/mcp.json` (in project) | Committed to repo |
-| Claude Code | `~/.claude/settings.json` | `~/.devcontainer-state/cache/{project}/claude/settings.json` |
+On container start, `post_create.sh` distributes this file to:
 
-Kiro's config is per-project because it's mounted from `cache/{project}/kiro/`.
+| Agent | Destination | How |
+|-------|------------|-----|
+| Kiro CLI | `~/.kiro/settings/mcp.json` | Copy |
+| Claude Code | `~/.claude/settings.json` | Merge `mcpServers` into existing settings |
+| Amazon Q / Codex | `${WORKSPACE_ROOT}/.amazonq/mcp.json` | Copy |
+
+**VS Code / Copilot** is the exception — `.vscode/mcp.json` uses a different format (`servers` key, `${ENV_VAR}` refs) and is committed to the repo. Maintain it separately.
 
 ---
 
-## Config Formats
-
-### Kiro CLI
-
-Top-level key: `mcpServers`
+## Source File Format
 
 ```json
 {
@@ -46,9 +44,13 @@ Top-level key: `mcpServers`
 }
 ```
 
-### VS Code
+This format is shared by Kiro, Claude, and Amazon Q.
 
-Top-level key: `servers`. Supports `inputs` for interactive prompts (useful outside devcontainers).
+---
+
+## VS Code Format
+
+Different top-level key, env var references instead of raw values:
 
 ```json
 {
@@ -58,24 +60,6 @@ Top-level key: `servers`. Supports `inputs` for interactive prompts (useful outs
       "args": ["-y", "package-name"],
       "env": {
         "ENV_VAR": "${ENV_VAR}"
-      }
-    }
-  }
-}
-```
-
-### Claude Code
-
-MCP servers are nested inside the settings file under `mcpServers`:
-
-```json
-{
-  "mcpServers": {
-    "server-name": {
-      "command": "npx",
-      "args": ["-y", "package-name"],
-      "env": {
-        "ENV_VAR": "value"
       }
     }
   }
@@ -106,38 +90,34 @@ GITHUB_PERSONAL_ACCESS_TOKEN  — or GITHUB_TOKEN
 
 ## Adding a New MCP Server
 
-### 1. Install the package globally in the container
-
-```bash
-npm install -g <package-name>
-```
-
-This uses the user-local npm prefix (`~/.npm-global/`) so the `vscode` user has write access.
-
-### 2. Test it responds to MCP initialize
+### 1. Test the server manually in the container
 
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' \
-  | ENV_VAR=value timeout 5 npx <package-name> 2>/dev/null
+  | ENV_VAR=value timeout 5 npx -y <package-name> 2>/dev/null
 ```
 
 Expected: a JSON response with `result.serverInfo`. If you get an error about missing env vars, the var names are wrong — check the server's source or README.
 
-### 3. Write the config
+### 2. Add to the source file
 
-Edit the appropriate config file for the agent (see Config File Locations above). Use the exact env var names from the test that worked.
+Edit `~/.devcontainer-state/ai/mcp/servers.json` on the host. Add the server entry with the exact env var names from the test.
 
-### 4. Restart the agent session
+### 3. Rebuild or re-run post_create.sh
 
-MCP configs are read at session start. Restart Kiro/Claude/VS Code to pick up changes.
+The config is distributed on container start. Either rebuild the container or run `post_create.sh` manually.
+
+### 4. Update VS Code config separately
+
+If using Copilot, add the server to `.vscode/mcp.json` in the project repo using the `servers` format with `${ENV_VAR}` references.
 
 ---
 
 ## Devcontainer Considerations
 
-- **Global npm packages persist** across container restarts (mounted via `~/.cache`) but are lost on rebuild. For permanent installs, add to `Dockerfile` or `post_create.sh`.
-- **Kiro config is on the host.** Edit `~/.devcontainer-state/cache/{project}/kiro/settings/mcp.json` from the host, or `~/.kiro/settings/mcp.json` from inside the container — they're the same file.
-- **Credentials in MCP configs are gitignored** because Kiro and Claude configs live in `cache/` (gitignored in devcontainer-state). VS Code's `.vscode/mcp.json` is committed — use `${ENV_VAR}` references there, not raw values.
+- **Global npm packages persist** across rebuilds via `~/.cache/npm-global` (on the cache mount).
+- **Credentials stay in devcontainer-state** (gitignored). They never appear in project repos — `.amazonq/` is gitignored, VS Code uses env var refs.
+- **One edit, all agents** — change `servers.json` once, rebuild, and Kiro/Claude/Amazon Q all get the update.
 
 ---
 
@@ -148,8 +128,9 @@ MCP configs are read at session start. Restart Kiro/Claude/VS Code to pick up ch
 | Server not found | Package not installed | `npm install -g <package>` |
 | "missing env var" error | Wrong env var name | Check Known Servers section; test manually |
 | Server starts but agent can't connect | Config in wrong file or wrong format | Check `mcpServers` vs `servers` key |
-| Works locally, fails in container | Config on host not mounted | Verify `~/.devcontainer-state/cache/{project}/kiro/settings/mcp.json` exists |
+| Config missing after rebuild | `servers.json` not on host | Check `~/.devcontainer-state/ai/mcp/servers.json` exists |
 | Agent doesn't see config changes | Stale session | Restart the agent session |
+| MCP warning on container start | `servers.json` not created yet | `cp servers.json.template servers.json` and fill in credentials |
 
 ---
 
