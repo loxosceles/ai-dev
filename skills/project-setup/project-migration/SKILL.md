@@ -26,7 +26,18 @@ Migrate an existing project to the current infrastructure and tooling standards.
 
 ### Phase 1: Assessment
 
-1. **Identify the project type.** Ask the user what stack this is (e.g., Next.js + SST, Python services, static frontend). This determines which blueprint to reference.
+1. **Pre-flight: Verify devcontainer-state**: Before anything else, check that `~/.devcontainer-state/.git` exists. If it doesn't, **stop immediately** and instruct:
+   ```
+   ⛔ ~/.devcontainer-state is not a git repo.
+   Docker will auto-create mount targets as empty root-owned directories, breaking the devcontainer.
+
+   Fix: git clone git@github.com:loxosceles/devcontainer-state.git ~/.devcontainer-state
+
+   If ~/.devcontainer-state already exists (empty/root-owned), remove it first:
+     sudo rm -rf ~/.devcontainer-state
+   ```
+   Do not proceed until this is resolved.
+2. **Identify the project type.** Ask the user what stack this is (e.g., Next.js + SST, Python services, static frontend). This determines which blueprint to reference.
 2. **Read the matching blueprint** from `loxosceles/project-blueprints` to understand the target state.
 3. **Audit the current project.** Check for the existence and content of:
    - `.devcontainer/` (Dockerfile, docker-compose.yml, devcontainer.json, post_create.sh, post_start.sh)

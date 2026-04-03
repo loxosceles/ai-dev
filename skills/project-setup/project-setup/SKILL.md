@@ -14,7 +14,18 @@ New projects are created from blueprints stored at `loxosceles/project-blueprint
 
 ## Workflow
 
-1. **Identify the blueprint**: Ask which stack the user wants (e.g., "nextjs-sst"). Read the corresponding blueprint from `blueprints/{stack}.md` in the repo.
+1. **Pre-flight: Verify devcontainer-state**: Before anything else, check that `~/.devcontainer-state/.git` exists. If it doesn't, **stop immediately** and instruct:
+   ```
+   ⛔ ~/.devcontainer-state is not a git repo.
+   Docker will auto-create mount targets as empty root-owned directories, breaking the devcontainer.
+
+   Fix: git clone git@github.com:loxosceles/devcontainer-state.git ~/.devcontainer-state
+
+   If ~/.devcontainer-state already exists (empty/root-owned), remove it first:
+     sudo rm -rf ~/.devcontainer-state
+   ```
+   Do not proceed until this is resolved.
+2. **Identify the blueprint**: Ask which stack the user wants (e.g., "nextjs-sst", "sst-python"). Read the corresponding blueprint from `blueprints/{stack}.md` in the repo.
 2. **Read the full blueprint** before starting. Understand all sections.
 3. **Collect variables**: Ask for `project_name`, `git_name`, `git_email`, and any other values the blueprint requires.
 4. **Execute sections in order**: Follow the blueprint step by step.
